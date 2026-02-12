@@ -1,0 +1,1677 @@
+<script src="brand_logo.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>EcoRun: Noble Carry</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 100%);
+            /* Daytime Sky */
+            user-select: none;
+        }
+
+        #game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Vignette */
+        #vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 60%, rgba(255, 255, 255, 0.3) 100%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* UI Layer */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 10;
+            /* Safe area padding for mobile notches */
+            padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 20px) env(safe-area-inset-bottom, 20px) env(safe-area-inset-left, 20px);
+            box-sizing: border-box;
+        }
+
+        /* Notifications (TOP MOST & SMALLER) */
+        .notification-area {
+            position: absolute;
+            top: 10px;
+            /* Very top */
+            width: 100%;
+            text-align: center;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            z-index: 100;
+            /* Highest priority */
+        }
+
+        .notify-msg {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            text-transform: uppercase;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transform: translateY(-50px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding: 8px 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #333;
+            color: #333;
+            transform: skewX(-10deg);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+        }
+
+        #reward-notify {
+            border-color: #ffd700;
+            color: #b8860b;
+            font-size: 1.2rem;
+        }
+
+        #upgrade-notify {
+            border-color: #00ced1;
+            color: #008b8b;
+            font-size: 1.0rem;
+        }
+
+        #bag-unlock-notify {
+            border-color: #9370db;
+            color: #4b0082;
+            font-size: 1.0rem;
+        }
+
+        #toast-notify {
+            border-color: #333;
+            color: #333;
+            font-size: 0.9rem;
+            background: #fff;
+        }
+
+        .notify-show {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+
+        /* Progress Bar */
+        #progress-wrapper {
+            position: absolute;
+            top: calc(env(safe-area-inset-top, 20px) + 90px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            max-width: 500px;
+        }
+
+        #progress-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            position: relative;
+            transform: skewX(-20deg);
+        }
+
+        #progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #00ced1;
+            box-shadow: 0 0 10px #00ced1;
+            transition: width 0.1s linear;
+        }
+
+        #reward-marker {
+            position: absolute;
+            left: 16.6%;
+            /* 500m */
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #ffd700;
+            z-index: 2;
+            box-shadow: 0 0 5px #ffd700;
+        }
+
+        #reward-label {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #b8860b;
+            margin-bottom: 3px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            text-shadow: 0 0 2px white;
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: env(safe-area-inset-top, 20px);
+            left: 0;
+            display: none;
+            padding: 0 10px;
+            margin-top: 0;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .hud-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            padding: 10px 15px;
+            border-radius: 4px;
+            border-left: 5px solid #00ced1;
+            color: #333;
+            transform: skewX(-10deg);
+            min-width: 90px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-val {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1rem, 3.5vw, 1.8rem);
+            font-weight: 700;
+            transform: skewX(10deg);
+            color: #008b8b;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #555;
+            transform: skewX(10deg);
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        /* SCREENS */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            pointer-events: auto;
+            text-align: center;
+            color: #333;
+            transition: opacity 0.5s;
+            overflow-y: auto;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.6rem, 9vw, 3.5rem);
+            background: linear-gradient(to right, #00ced1, #008b8b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 206, 209, 0.3);
+            text-transform: uppercase;
+        }
+
+        p {
+            font-size: clamp(0.8rem, 2.5vw, 1.1rem);
+            color: #444;
+            max-width: 95%;
+            line-height: 1.4;
+            font-weight: 600;
+        }
+
+        input {
+            margin: 20px 0;
+            padding: 12px 20px;
+            font-size: 1.1rem;
+            border: 2px solid #00ced1;
+            background: white;
+            color: #333;
+            text-align: center;
+            outline: none;
+            transition: 0.3s;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            padding: 12px 40px;
+            font-size: clamp(1rem, 4vw, 1.3rem);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            background: linear-gradient(90deg, #00ced1, #20b2aa);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 206, 209, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            clip-path: polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%);
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 206, 209, 0.6);
+        }
+
+        .coupon-container {
+            background: #fff;
+            border: 3px solid #ffd700;
+            padding: 15px 30px;
+            margin: 15px 0;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+            transform: skewX(-10deg);
+        }
+
+        .coupon-code {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            color: #b8860b;
+            font-weight: bold;
+            letter-spacing: 2px;
+            transform: skewX(10deg);
+        }
+
+        /* Leaderboard & Marketing Styles */
+        .leaderboard-box {
+            background: rgba(255, 255, 255, 0.98);
+            border: 3px solid #00ced1;
+            padding: 12px;
+            margin: 15px 0;
+            width: 92%;
+            max-width: 400px;
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+            transform: skewX(-3deg);
+            box-sizing: border-box;
+        }
+
+        .lb-header {
+            font-family: 'Orbitron', sans-serif;
+            color: #008b8b;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 5px;
+            border-bottom: 2px solid #00ced1;
+            padding-bottom: 5px;
+        }
+
+        .lb-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 10px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: bold;
+            font-size: 1rem;
+            color: #444;
+        }
+
+        .lb-row:last-child {
+            border-bottom: none;
+        }
+
+        .lb-rank {
+            width: 30px;
+        }
+
+        .lb-name {
+            flex-grow: 1;
+            text-align: left;
+            padding-left: 10px;
+            text-transform: uppercase;
+        }
+
+        .lb-score {
+            text-align: right;
+            color: #008b8b;
+        }
+
+        .marketing-text {
+            color: #555;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            letter-spacing: 1px;
+        }
+
+        .marketing-highlight {
+            color: #008b8b;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #tutorial {
+            position: absolute;
+            bottom: clamp(60px, 10vh, 100px);
+            width: 100%;
+            text-align: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1rem, 5vw, 1.5rem);
+            color: #333;
+            text-shadow: 2px 2px 0px white;
+            opacity: 0.8;
+            animation: pulse 2s infinite;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 500px) {
+            #ui-layer {
+                padding: env(safe-area-inset-top, 10px) 15px env(safe-area-inset-bottom, 10px) 15px;
+            }
+
+            .hud-panel {
+                padding: 8px 12px;
+                min-width: 80px;
+            }
+
+            #progress-wrapper {
+                top: calc(env(safe-area-inset-top, 10px) + 85px);
+                width: 90%;
+            }
+
+            .coupon-container {
+                padding: 10px 20px;
+            }
+
+            .leaderboard-box {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-container"></div>
+    <div id="vignette"></div>
+
+    <div id="ui-layer">
+        <div class="notification-area">
+            <div id="reward-notify" class="notify-msg">REWARD UNLOCKED!</div>
+            <div id="upgrade-notify" class="notify-msg">NOBLE CARRY UPGRADE</div>
+            <div id="bag-unlock-notify" class="notify-msg">NOBLE CARRY CRAFTED</div>
+            <div id="toast-notify" class="notify-msg">NOTIFICATION</div>
+        </div>
+
+        <div id="progress-wrapper">
+            <div id="reward-label">UNLOCK COUPON: 500m</div>
+            <div id="progress-container">
+                <div id="reward-marker"></div>
+                <div id="progress-fill"></div>
+            </div>
+        </div>
+
+        <div id="hud">
+            <div class="hud-panel">
+                <div class="stat-val" id="score-display">0</div>
+                <div class="stat-label">HANDBAGS</div>
+            </div>
+            <div class="hud-panel" style="text-align: right; border-left: none; border-right: 5px solid #ff4500;">
+                <div class="stat-val" id="dist-display">0m</div>
+                <div class="stat-label">DISTANCE</div>
+            </div>
+        </div>
+
+        <div id="tutorial" class="hidden">ARROWS / SWIPE TO MOVE & JUMP</div>
+    </div>
+
+    <div id="start-screen" class="screen">
+        <h1>EcoRun</h1>
+        <p>READY TO CARRY YOUR LEGACY</p>
+        <p style="font-size: 1rem; color: #008b8b; margin-top: 5px;">Build your NOBLE CARRY bag</p>
+
+        <input type="text" id="player-name" placeholder="ENTER YOUR NAME" maxlength="20">
+        <button id="start-btn">START</button>
+    </div>
+
+    <div id="game-over-screen" class="screen hidden">
+        <h1 id="fail-title"
+            style="color: #ff4500; -webkit-text-fill-color: #ff4500; font-size: clamp(2rem, 8vw, 3rem);">CAUGHT</h1>
+        <p id="fail-subtitle">MISSION FAILED</p>
+
+        <div class="hud-panel" style="margin: 10px; border-color: #ff4500;">
+            <div class="stat-val" id="final-dist">0m</div>
+            <div class="stat-label">DISTANCE</div>
+        </div>
+
+        <div id="fail-marketing">
+            <div class="marketing-text">FEATURING: <span class="marketing-highlight">NOBLE CARRY</span></div>
+            <div class="marketing-text" style="font-size: 0.8rem; margin-bottom: 10px;">SUSTAINABLE • DURABLE • STYLISH
+            </div>
+        </div>
+
+        <div class="leaderboard-box">
+            <div class="lb-header">LEADERSHIP DASHBOARD</div>
+            <div id="lb-content-fail"></div>
+        </div>
+
+        <button id="retry-btn" style="margin-top:15px; margin-bottom: 20px;">RETRY MISSION</button>
+    </div>
+
+    <div id="win-screen" class="screen hidden">
+        <h1 id="win-title"
+            style="background: linear-gradient(to right, #ffd700, #b8860b); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-size: clamp(1.8rem, 7vw, 3rem);">
+            VICTORY</h1>
+
+        <div class="marketing-text">PRESENTING: <span class="marketing-highlight">NOBLE CARRY</span></div>
+        <div class="marketing-text" style="font-size: 0.8rem;">WEAR THE LEGACY</div>
+
+        <div class="coupon-container" onclick="copyCode()">
+            <div class="coupon-code">NOBLE-CARRY-20</div>
+            <div style="font-size: 0.8rem; color: #555; margin-top: 5px; transform: skewX(10deg);">TAP TO COPY</div>
+        </div>
+
+        <div class="leaderboard-box">
+            <div class="lb-header">LEADERSHIP DASHBOARD</div>
+            <div id="lb-content-win"></div>
+        </div>
+
+        <button id="shop-btn" style="margin-bottom: 5px;">VISIT SITE</button>
+        <button id="play-again-btn"
+            style="background: transparent; border: 2px solid #555; color: #333; font-size: 1rem; padding: 10px 30px;">RUN
+            AGAIN</button>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+        // --- Configuration ---
+        // --- Configuration ---
+        const CONFIG = {
+            laneWidth: 3.5,
+            runSpeed: 35, // Increased for faster gameplay
+            maxSpeed: 90,
+            gravity: -60, // Slightly reduced for better arc
+            jumpForce: 18,
+            bagUnlockDist: 250,
+            rewardDist: 500,
+            finishDist: 3000,
+            upgradeInterval: 250,
+            shopifyURL: "https://burujula-jaidev-prasad.github.io/noble-carry/", // Redirect to product page
+            cameraOffset: { x: 0, y: 5, z: 8 },
+            cameraLookAtOffset: { x: 0, y: 2, z: 0 }
+        };
+
+        // --- Globals ---
+        let scene, camera, renderer;
+        let playerGroup, playerMeshParts = {};
+        let chaserGroup, chaserParts = { police: {}, dog: {} };
+        let ambientLight, dirLight;
+        // Guard removed
+        let isPlaying = false;
+
+        // State
+        let gameState = 'start';
+        let score = 0;
+        let distance = 0;
+        let speed = CONFIG.runSpeed;
+        let timeElapsed = 0;
+        let rewardUnlocked = false;
+        let currentBagLevel = -1;
+        let currentPlayerName = "RUNNER";
+        let showcaseBag = null;
+
+        // Player Movement
+        let lane = 0;
+        let currentLaneX = 0;
+        let playerY = 0;
+        let verticalVelocity = 0;
+        let isJumping = false;
+        let leanAngle = 0;
+
+        // Objects
+        let objects = [];
+        let trees = [];
+        let billboards = [];
+        let festivalProps = [];
+        let particles = [];
+        const MATS = {};
+        let audioCtx;
+
+        // --- Init ---
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 20, 150);
+
+            const aspect = window.innerWidth / window.innerHeight;
+            camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 300);
+            if (aspect < 1) camera.fov = 60 / aspect; // Adjust FOV for portrait mode
+            camera.updateProjectionMatrix();
+            camera.position.set(0, 3, 8);
+            camera.lookAt(0, 2, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            // Lights
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(30, 100, 50);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.set(2048, 2048);
+            scene.add(dirLight);
+
+            // Setup World
+            initMaterials();
+            createEnvironment();
+            createRealisticPlayer();
+
+            // Chasers
+            chaserGroup = new THREE.Group();
+            const police = createPoliceMesh();
+            police.group.position.set(-0.5, 0, 0); // Slight offset from dog
+            chaserGroup.add(police.group);
+            chaserParts.police = police;
+
+            const dog = createDogMesh();
+            dog.group.position.set(0.6, 0, 0.4); // Next to police
+            chaserGroup.add(dog.group);
+            chaserParts.dog = dog;
+
+            chaserGroup.position.z = 12; // Start behind player
+            scene.add(chaserGroup);
+            // Guard creation removed
+
+            // Inputs
+            document.addEventListener('keydown', handleKey);
+            let tx = 0, ty = 0;
+            document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: false });
+            document.addEventListener('touchend', e => {
+                const dx = e.changedTouches[0].clientX - tx;
+                const dy = e.changedTouches[0].clientY - ty;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    if (Math.abs(dx) > 30) shiftLane(dx > 0 ? 1 : -1);
+                } else {
+                    if (dy < -30) jump();
+                }
+            }, { passive: false });
+
+            window.addEventListener('resize', onResize);
+
+            // Buttons
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            document.getElementById('retry-btn').addEventListener('click', resetGame);
+            document.getElementById('play-again-btn').addEventListener('click', resetGame);
+
+            // SHOPIFY REDIRECT
+            document.getElementById('shop-btn').addEventListener('click', () => {
+                showToast("OPENING SHOPIFY...");
+                window.location.href = CONFIG.shopifyURL;
+            });
+
+            prepareStartScene();
+            animate();
+        }
+
+        // Helper to create a stylish handbag mesh
+        // Helper to create Noble Carry Logo Texture
+        function createNobleCarryLogoTexture() {
+            if (window.NOBLE_CARRY_LOGO_SRC) {
+                const img = new Image();
+                img.src = window.NOBLE_CARRY_LOGO_SRC;
+                const tex = new THREE.Texture(img);
+                img.onload = () => { tex.needsUpdate = true; };
+                return tex;
+            }
+
+            // Fallback if script didn't load
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffd700'; ctx.fillRect(0, 0, 256, 256);
+            ctx.fillStyle = '#000'; ctx.font = '20px Arial'; ctx.fillText("NOBLE", 100, 128);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createHandbagMesh(colorHex, scale = 1.0) {
+            const bagGroup = new THREE.Group();
+            const bagMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.6, metalness: 0.2 });
+
+            // Bag Body
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.4 * scale, 0.2 * scale), bagMat);
+            body.castShadow = true;
+            bagGroup.add(body);
+
+            // Handle
+            const handleGeo = new THREE.TorusGeometry(0.15 * scale, 0.03 * scale, 8, 16, Math.PI);
+            const handle = new THREE.Mesh(handleGeo, bagMat);
+            handle.position.y = 0.2 * scale;
+            handle.castShadow = true;
+            bagGroup.add(handle);
+
+            // Decorative flap
+            const flap = new THREE.Mesh(new THREE.BoxGeometry(0.4 * scale, 0.15 * scale, 0.05 * scale), bagMat);
+            flap.position.set(0, 0.05 * scale, 0.1 * scale);
+            bagGroup.add(flap);
+
+            // LOGO PLATE
+            const logoTex = createNobleCarryLogoTexture();
+            const plateMat = new THREE.MeshStandardMaterial({
+                map: logoTex,
+                emissive: 0xffffff,
+                emissiveMap: logoTex,
+                emissiveIntensity: 0.5
+            });
+            const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.15 * scale, 0.15 * scale), plateMat);
+            plate.position.set(0, 0.05 * scale, 0.13 * scale);
+            bagGroup.add(plate);
+
+            return bagGroup;
+        }
+
+        // Helper to create text textures for billboards
+        function createTextTexture(text, bgColor, textColor) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, 512, 256);
+
+            ctx.lineWidth = 15;
+            ctx.strokeStyle = '#333';
+            ctx.strokeRect(0, 0, 512, 256);
+
+            ctx.fillStyle = textColor;
+            ctx.font = 'bold 50px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 256, 128);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            return tex;
+        }
+
+        // --- NEW TEXTURE GENERATORS ---
+        function createFaceTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffcd94'; ctx.fillRect(0, 0, 128, 128); // Skin tone
+
+            // Eyes
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.ellipse(40, 50, 10, 6, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(88, 50, 10, 6, 0, 0, Math.PI * 2); ctx.fill();
+
+            // Pupils
+            ctx.fillStyle = '#333';
+            ctx.beginPath(); ctx.arc(40, 50, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(88, 50, 4, 0, Math.PI * 2); ctx.fill();
+
+            // Mouth (Smile)
+            ctx.strokeStyle = '#a0522d'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(64, 80, 20, 0, Math.PI); ctx.stroke();
+
+            // Eyebrows
+            ctx.strokeStyle = '#5c4033'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(30, 40); ctx.lineTo(50, 38); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(78, 38); ctx.lineTo(98, 40); ctx.stroke();
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createOutfitTexture(colorHex, type = 'shirt') {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+
+            // Base
+            ctx.fillStyle = '#' + new THREE.Color(colorHex).getHexString();
+            ctx.fillRect(0, 0, 128, 128);
+
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            if (type === 'shirt') {
+                // Collar area
+                ctx.fillRect(54, 0, 20, 20);
+                // Vertical stitch
+                ctx.fillRect(62, 0, 4, 128);
+                // Logo placeholder
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(90, 40, 10, 0, Math.PI * 2); ctx.fill();
+            } else if (type === 'pants') {
+                // Belt loop area
+                ctx.fillRect(0, 0, 128, 10);
+                // Side seams
+                ctx.fillRect(0, 0, 5, 128);
+                ctx.fillRect(123, 0, 5, 128);
+            }
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createVehicleTexture(type) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+
+            // Base metallic
+            ctx.fillStyle = type === 'train' ? '#e74c3c' : '#3498db';
+            ctx.fillRect(0, 0, 256, 128);
+
+            // Details
+            ctx.fillStyle = '#111';
+            // Windows
+            if (type === 'train') {
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(20, 20, 60, 40);
+                ctx.fillRect(100, 20, 60, 40);
+                ctx.fillRect(180, 20, 60, 40);
+
+                // Door lines
+                ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+                ctx.strokeRect(90, 10, 80, 110);
+            }
+
+            // Logo
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 20px "Playfair Display", serif';
+            ctx.fillText("NOBLE CARRY", 60, 95);
+
+            // PROMOTION BADGE
+            ctx.fillStyle = '#ffd700'; // Gold
+            ctx.beginPath();
+            ctx.arc(40, 90, 15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 10px Arial';
+            ctx.fillText("PREMIUM", 18, 93);
+
+            // GRAFFITI
+            if (type === 'train') {
+                ctx.fillStyle = '#f1c40f'; // Yellow
+                ctx.font = 'italic bold 20px "Courier New"';
+                ctx.fillText("HANDBAGS", 30, 80);
+                ctx.fillStyle = '#e67e22'; // Orange
+                ctx.fillText("GOODS CARRY", 40, 105);
+            }
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createPoliceMesh() {
+            const policeGroup = new THREE.Group();
+            const skinMat = MATS.skin;
+            const uniformMat = new THREE.MeshLambertMaterial({ color: 0x000080 }); // Navy Blue
+
+            // Torso
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.2, 0.75, 12), uniformMat);
+            torso.position.y = 1.45; torso.castShadow = true;
+            policeGroup.add(torso);
+
+            // Head
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), skinMat);
+            head.position.y = 2.05; head.castShadow = true;
+            policeGroup.add(head);
+
+            // Police Cap
+            const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.22, 0.1, 12), uniformMat);
+            cap.position.y = 2.25;
+            policeGroup.add(cap);
+            const brim = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.15), new THREE.MeshLambertMaterial({ color: 0x111111 }));
+            brim.position.set(0, 2.2, 0.15);
+            policeGroup.add(brim);
+
+            // Arms & Legs (Simplified pivots for chaser)
+            const limbGeo = new THREE.CylinderGeometry(0.07, 0.06, 0.7, 12);
+
+            const lArm = new THREE.Mesh(limbGeo, uniformMat); lArm.position.set(-0.32, 1.4, 0); policeGroup.add(lArm);
+            const rArm = new THREE.Mesh(limbGeo, uniformMat); rArm.position.set(0.32, 1.4, 0); policeGroup.add(rArm);
+            const lLeg = new THREE.Mesh(limbGeo, uniformMat); lLeg.position.set(-0.15, 0.75, 0); policeGroup.add(lLeg);
+            const rLeg = new THREE.Mesh(limbGeo, uniformMat); rLeg.position.set(0.15, 0.75, 0); policeGroup.add(rLeg);
+
+            return { group: policeGroup, lArm, rArm, lLeg, rLeg };
+        }
+
+        function createDogMesh() {
+            const dogGroup = new THREE.Group();
+            const furMat = new THREE.MeshLambertMaterial({ color: 0xcd853f }); // Peru (Golden Brown)
+
+            // Body
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.6), furMat);
+            body.position.y = 0.4; body.castShadow = true;
+            dogGroup.add(body);
+
+            // Head
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), furMat);
+            head.position.set(0, 0.6, 0.35); head.castShadow = true;
+            dogGroup.add(head);
+
+            // Snout
+            const snout = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.15), furMat);
+            snout.position.set(0, 0.55, 0.5);
+            dogGroup.add(snout);
+
+            // Ears
+            const earGeo = new THREE.BoxGeometry(0.05, 0.15, 0.1);
+            const lEar = new THREE.Mesh(earGeo, furMat); lEar.position.set(-0.1, 0.75, 0.3); dogGroup.add(lEar);
+            const rEar = new THREE.Mesh(earGeo, furMat); rEar.position.set(0.1, 0.75, 0.3); dogGroup.add(rEar);
+
+            // Legs
+            const legGeo = new THREE.BoxGeometry(0.08, 0.3, 0.08);
+            const flLeg = new THREE.Mesh(legGeo, furMat); flLeg.position.set(-0.1, 0.15, 0.2); dogGroup.add(flLeg);
+            const frLeg = new THREE.Mesh(legGeo, furMat); frLeg.position.set(0.1, 0.15, 0.2); dogGroup.add(frLeg);
+            const blLeg = new THREE.Mesh(legGeo, furMat); blLeg.position.set(-0.1, 0.15, -0.2); dogGroup.add(blLeg);
+            const brLeg = new THREE.Mesh(legGeo, furMat); brLeg.position.set(0.1, 0.15, -0.2); dogGroup.add(brLeg);
+
+            return { group: dogGroup, flLeg, frLeg, blLeg, brLeg };
+        }
+
+        function spawnFestivalLights(z) {
+            const colors = [0xffd700, 0xff69b4, 0x00ced1, 0xffffff]; // Gold, Pink, Cyan, White
+            const sideX = 14; // Position poles outside the tracks
+
+            [-sideX, sideX].forEach(x => {
+                const poleGroup = new THREE.Group();
+
+                // Pole
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 5), MATS.rail);
+                pole.position.y = 2.5;
+                poleGroup.add(pole);
+
+                // Lights String
+                for (let i = 0; i < 3; i++) {
+                    const light = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.3, 8, 8),
+                        new THREE.MeshStandardMaterial({
+                            color: colors[Math.floor(Math.random() * colors.length)],
+                            emissive: 0x444444, // Low initial glow
+                            emissiveIntensity: 0.5
+                        })
+                    );
+                    light.position.set((x > 0 ? -1 : 1) * (i * 0.5), 4.5 - (i * 0.3), 0.5);
+                    light.userData = { isFestivalLight: true };
+                    poleGroup.add(light);
+                }
+
+                poleGroup.position.set(x, 0, z);
+                scene.add(poleGroup);
+                festivalProps.push(poleGroup);
+            });
+        }
+
+        function initMaterials() {
+            MATS.track = new THREE.MeshPhongMaterial({ color: 0x555555 });
+            MATS.rail = new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.4, metalness: 0.6 });
+            MATS.trainBody = new THREE.MeshStandardMaterial({ map: createVehicleTexture('train'), roughness: 0.3 });
+            MATS.trainGlass = new THREE.MeshStandardMaterial({ color: 0x87CEEB, roughness: 0.1 });
+
+            MATS.skin = new THREE.MeshLambertMaterial({ map: createFaceTexture() });
+            MATS.clothes = new THREE.MeshLambertMaterial({ map: createOutfitTexture(0x00ced1, 'shirt') });
+            MATS.pants = new THREE.MeshLambertMaterial({ map: createOutfitTexture(0x333333, 'pants') });
+
+            MATS.thread = new THREE.MeshPhongMaterial({ color: 0x32CD32, emissive: 0x006400 });
+
+            MATS.trunk = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+            MATS.leaf = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+
+            MATS.outfits = [
+                new THREE.MeshLambertMaterial({ color: 0x00ced1 }),
+                new THREE.MeshLambertMaterial({ color: 0x3498db }),
+                new THREE.MeshLambertMaterial({ color: 0x1abc9c }),
+                new THREE.MeshLambertMaterial({ color: 0x9b59b6 }),
+                new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.3, roughness: 0.4 }),
+                new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.5, roughness: 0.2 })
+            ];
+
+            // Billboard Textures
+            MATS.billboards = [
+                createTextTexture("NOBLE CARRY", "#ffffff", "#008b8b"),
+                createTextTexture("SUSTAINABLE", "#228b22", "#ffffff"),
+                createTextTexture("RECYCLE", "#00ced1", "#ffffff"),
+                createTextTexture("NOBLE CARRY", "#ffd700", "#333333"),
+                createTextTexture("ECO FRIENDLY", "#87ceeb", "#333333")
+            ];
+        }
+
+        function createEnvironment() {
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 800), new THREE.MeshLambertMaterial({ color: 0x7CFC00 }));
+            ground.rotation.x = -Math.PI / 2; ground.position.z = -300; ground.receiveShadow = true; scene.add(ground);
+
+            const trackBed = new THREE.Mesh(new THREE.PlaneGeometry(12, 800), MATS.track);
+            trackBed.rotation.x = -Math.PI / 2; trackBed.position.set(0, 0.02, -300); trackBed.receiveShadow = true; scene.add(trackBed);
+
+            [-1, 0, 1].forEach(l => {
+                const x = l * CONFIG.laneWidth;
+                const r1 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 800), MATS.rail); r1.position.set(x - 1.2, 0.1, -300); scene.add(r1);
+                const r2 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 800), MATS.rail); r2.position.set(x + 1.2, 0.1, -300); scene.add(r2);
+            });
+            spawnInitialTrees();
+        }
+
+        function spawnInitialTrees() {
+            for (let z = 50; z > -400; z -= 10) {
+                spawnTree(-15 - Math.random() * 30, z);
+                spawnTree(15 + Math.random() * 30, z);
+            }
+        }
+
+        function spawnTree(x, z) {
+            const tree = new THREE.Group();
+            const scale = 0.8 + Math.random() * 0.6;
+            const trunkH = 3 * scale;
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4 * scale, 0.6 * scale, trunkH, 6), MATS.trunk);
+            trunk.position.y = trunkH / 2; trunk.castShadow = true; tree.add(trunk);
+
+            const leaves1 = new THREE.Mesh(new THREE.ConeGeometry(2.5 * scale, 4 * scale, 6), MATS.leaf);
+            leaves1.position.y = trunkH + (1 * scale); leaves1.castShadow = true; tree.add(leaves1);
+
+            const leaves2 = new THREE.Mesh(new THREE.ConeGeometry(2 * scale, 3.5 * scale, 6), MATS.leaf);
+            leaves2.position.y = trunkH + (3 * scale); leaves2.castShadow = true; tree.add(leaves2);
+
+            tree.position.set(x, 0, z); scene.add(tree); trees.push(tree);
+        }
+
+        function spawnBillboard(x, z) {
+            const billboard = new THREE.Group();
+            const scale = 3.0;
+
+            // Legs
+            const legGeo = new THREE.CylinderGeometry(0.15 * scale, 0.15 * scale, 4 * scale);
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+            const leg1 = new THREE.Mesh(legGeo, legMat);
+            leg1.position.set(-1.5 * scale, 2 * scale, 0);
+            billboard.add(leg1);
+
+            const leg2 = new THREE.Mesh(legGeo, legMat);
+            leg2.position.set(1.5 * scale, 2 * scale, 0);
+            billboard.add(leg2);
+
+            // Board
+            const boardGeo = new THREE.BoxGeometry(3.5 * scale, 2.0 * scale, 0.3 * scale);
+            const tex = MATS.billboards[Math.floor(Math.random() * MATS.billboards.length)];
+            const boardMat = [
+                new THREE.MeshStandardMaterial({ color: 0xcccccc }),
+                new THREE.MeshStandardMaterial({ color: 0xcccccc }),
+                new THREE.MeshStandardMaterial({ color: 0xcccccc }),
+                new THREE.MeshStandardMaterial({ color: 0xcccccc }),
+                new THREE.MeshBasicMaterial({ map: tex }),
+                new THREE.MeshStandardMaterial({ color: 0xcccccc })
+            ];
+            const board = new THREE.Mesh(boardGeo, boardMat);
+            board.position.y = 3.8 * scale;
+            billboard.add(board);
+
+            billboard.position.set(x * 1.8, 0, z);
+            billboard.lookAt(0, 0, z + 30);
+
+            scene.add(billboard);
+            billboards.push(billboard);
+        }
+
+        function createBoomEffect(x, y, z) {
+            const count = 8;
+            for (let i = 0; i < count; i++) {
+                const particle = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.2, 0.2, 0.2),
+                    new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffaa00 })
+                );
+                particle.position.set(x, y, z);
+                const velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 10
+                );
+                scene.add(particle);
+                particles.push({ mesh: particle, vel: velocity, life: 1.0 });
+            }
+        }
+
+        function createCracker(x, y, z) {
+            const particleCount = 20;
+            const colors = [0xffd700, 0xff00ff, 0x00ffff, 0x7fff00, 0xff4500]; // Gold, Magenta, Cyan, Lime, Orange
+            const color = colors[Math.floor(Math.random() * colors.length)];
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.15, 8, 8),
+                    new THREE.MeshStandardMaterial({
+                        color: color,
+                        emissive: color,
+                        emissiveIntensity: 1.0
+                    })
+                );
+                particle.position.set(x, y, z);
+
+                // Random explosion velocity
+                const angle = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                const speed = 5 + Math.random() * 8;
+                const velocity = new THREE.Vector3(
+                    Math.sin(phi) * Math.cos(angle) * speed,
+                    Math.sin(phi) * Math.sin(angle) * speed,
+                    Math.cos(phi) * speed
+                );
+
+                scene.add(particle);
+                particles.push({
+                    mesh: particle,
+                    vel: velocity,
+                    life: 1.0,
+                    isCracker: true
+                });
+            }
+        }
+
+        function createRealisticPlayer() {
+            playerGroup = new THREE.Group();
+
+            // Higher polygon count for smoother look
+            const torsoGeo = new THREE.CylinderGeometry(0.24, 0.2, 0.75, 12);
+            const torso = new THREE.Mesh(torsoGeo, MATS.outfits[0]);
+            torso.position.y = 1.45; torso.castShadow = true;
+            playerGroup.add(torso); playerMeshParts.torso = torso;
+
+            const headGeo = new THREE.SphereGeometry(0.22, 24, 24);
+            const head = new THREE.Mesh(headGeo, MATS.skin);
+            head.position.y = 2.05;
+            head.rotation.y = -Math.PI / 2; // Face forward
+            head.castShadow = true;
+            playerGroup.add(head);
+
+            // --- LONG HAIR ---
+            const hairGroup = new THREE.Group();
+            const hairMat = new THREE.MeshLambertMaterial({ color: 0x2c1e14 }); // Dark brown/black
+
+            // Scalp
+            const scalp = new THREE.Mesh(new THREE.SphereGeometry(0.23, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), hairMat);
+            scalp.position.y = 2.05;
+            hairGroup.add(scalp);
+
+            // Back Hair
+            const backHair = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.1), hairMat);
+            backHair.position.set(0, 1.8, -0.15);
+            hairGroup.add(backHair);
+
+            // Side Hair (Left)
+            const sideHairL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.2), hairMat);
+            sideHairL.position.set(-0.2, 1.85, 0);
+            hairGroup.add(sideHairL);
+
+            // Side Hair (Right)
+            const sideHairR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.2), hairMat);
+            sideHairR.position.set(0.2, 1.85, 0);
+            hairGroup.add(sideHairR);
+
+            playerGroup.add(hairGroup);
+            playerMeshParts.hair = hairGroup;
+
+            const limbGeo = new THREE.CylinderGeometry(0.07, 0.06, 0.7, 12);
+            const handGeo = new THREE.SphereGeometry(0.08, 12, 12);
+            const footGeo = new THREE.BoxGeometry(0.15, 0.1, 0.28);
+
+            // --- ARMS ---
+            // Left Arm Pivot (Shoulder)
+            const lArmPiv = new THREE.Group(); lArmPiv.position.set(-0.32, 1.75, 0); playerGroup.add(lArmPiv);
+            const lArm = new THREE.Mesh(limbGeo, MATS.outfits[0]); lArm.position.y = -0.35; lArm.castShadow = true; lArmPiv.add(lArm);
+            const lHand = new THREE.Mesh(handGeo, MATS.skin); lHand.position.y = -0.4; lHand.castShadow = true; lArm.add(lHand);
+            playerMeshParts.lArm = lArmPiv; // Save pivot for animation
+
+            // Right Arm Pivot (Shoulder)
+            const rArmPiv = new THREE.Group(); rArmPiv.position.set(0.32, 1.75, 0); playerGroup.add(rArmPiv);
+            const rArm = new THREE.Mesh(limbGeo, MATS.outfits[0]); rArm.position.y = -0.35; rArm.castShadow = true; rArmPiv.add(rArm);
+            const rHand = new THREE.Mesh(handGeo, MATS.skin); rHand.position.y = -0.4; rHand.castShadow = true; rArm.add(rHand);
+            playerMeshParts.rArm = rArmPiv; // Save pivot for animation
+            playerMeshParts.rHand = rHand; // Save hand for attaching handbag
+
+            // --- LEGS ---
+            // Left Leg Pivot (Hip)
+            const lLegPiv = new THREE.Group(); lLegPiv.position.set(-0.15, 1.1, 0); playerGroup.add(lLegPiv);
+            const lLeg = new THREE.Mesh(limbGeo, MATS.pants); lLeg.position.y = -0.35; lLeg.castShadow = true; lLegPiv.add(lLeg);
+            const lFoot = new THREE.Mesh(footGeo, MATS.track); lFoot.position.set(0, -0.4, 0.08); lFoot.castShadow = true; lLeg.add(lFoot);
+            playerMeshParts.lLeg = lLegPiv; // Save pivot for animation
+
+            // Right Leg Pivot (Hip)
+            const rLegPiv = new THREE.Group(); rLegPiv.position.set(0.15, 1.1, 0); playerGroup.add(rLegPiv);
+            const rLeg = new THREE.Mesh(limbGeo, MATS.pants); rLeg.position.y = -0.35; rLeg.castShadow = true; rLegPiv.add(rLeg);
+            const rFoot = new THREE.Mesh(footGeo, MATS.track); rFoot.position.set(0, -0.4, 0.08); rFoot.castShadow = true; rLeg.add(rFoot);
+            playerMeshParts.rLeg = rLegPiv; // Save pivot for animation
+
+            scene.add(playerGroup);
+            scene.add(playerGroup);
+            currentBagLevel = 0; upgradeBag(0); // Start with basic bag
+        }
+
+        function updateOutfit(level) {
+            const matIndex = Math.min(Math.max(level + 1, 0), MATS.outfits.length - 1);
+            const newMat = MATS.outfits[matIndex];
+            if (playerMeshParts.torso) playerMeshParts.torso.material = newMat;
+            if (playerMeshParts.lArm && playerMeshParts.lArm.children[0]) playerMeshParts.lArm.children[0].material = newMat;
+            if (playerMeshParts.rArm && playerMeshParts.rArm.children[0]) playerMeshParts.rArm.children[0].material = newMat;
+        }
+
+        function upgradeBag(level) {
+            // Remove existing bag from hand OR back
+            if (playerMeshParts.bag) {
+                if (playerMeshParts.bag.parent) playerMeshParts.bag.parent.remove(playerMeshParts.bag);
+                playerMeshParts.bag = null;
+            }
+            updateOutfit(level);
+            if (level === -1) return;
+
+            const styles = [
+                { color: 0xD2691E, scale: 0.5 }, { color: 0x8FBC8F, scale: 0.7 },
+                { color: 0x4682B4, scale: 0.85 }, { color: 0x9932CC, scale: 1.0 }, { color: 0xFFD700, scale: 1.2 }
+            ];
+            const style = styles[Math.min(level, styles.length - 1)];
+
+            // Create New Handbag for Hand
+            const newBag = createHandbagMesh(style.color, style.scale * 1.2);
+
+            // Attach to Right Hand
+            if (playerMeshParts.rHand) {
+                newBag.position.set(0.05, -0.1, 0.05); // Tighter fit in hand
+                newBag.rotation.z = Math.PI / 1.5; // Better grip angle
+                playerMeshParts.rHand.add(newBag);
+                playerMeshParts.bag = newBag;
+            }
+        }
+
+        // Guard function removed
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function prepareStartScene() {
+            camera.position.set(0, 3, 5);
+            camera.lookAt(0, 2, 0);
+            playerGroup.rotation.y = Math.PI;
+        }
+
+        function startGame() {
+            const input = document.getElementById('player-name');
+            currentPlayerName = input.value.trim() || "Runner";
+            speak(`Hello ${currentPlayerName}`);
+            initAudio();
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('hud').style.display = 'flex';
+            document.getElementById('tutorial').classList.remove('hidden');
+            setTimeout(() => document.getElementById('tutorial').classList.add('hidden'), 3000);
+            resetGameLogic();
+            camera.position.set(0, 6, 9);
+            camera.rotation.x = -0.35;
+            playerGroup.rotation.y = 0;
+            gameState = 'playing';
+            isPlaying = true;
+        }
+
+        function resetGame() {
+            document.getElementById('game-over-screen').classList.add('hidden');
+            document.getElementById('win-screen').classList.add('hidden');
+            document.getElementById('hud').style.display = 'flex';
+            resetGameLogic();
+            camera.position.set(0, 6, 9);
+            camera.rotation.x = -0.35;
+            playerGroup.rotation.y = 0;
+            gameState = 'playing';
+            isPlaying = true;
+        }
+
+        function resetGameLogic() {
+            score = 0; distance = 0; speed = CONFIG.runSpeed; timeElapsed = 0; lane = 0; rewardUnlocked = false;
+            currentBagLevel = -1; playerGroup.position.set(0, 0, 0);
+            upgradeBag(-1);
+            objects.forEach(o => scene.remove(o.mesh)); objects = [];
+            trees.forEach(t => scene.remove(t)); trees = [];
+            billboards.forEach(b => scene.remove(b)); billboards = [];
+            festivalProps.forEach(p => scene.remove(p)); festivalProps = [];
+            if (showcaseBag) { scene.remove(showcaseBag); showcaseBag = null; }
+            playerGroup.visible = true;
+
+            // Reset Day Mode
+            scene.background.set(0x87CEEB);
+            scene.fog.color.set(0x87CEEB);
+            if (ambientLight) ambientLight.intensity = 0.7;
+            if (dirLight) dirLight.intensity = 1.2;
+
+            spawnInitialTrees(); spawnPattern(60);
+        }
+
+        function initAudio() {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AC();
+        }
+
+        function playSFX() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1500, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        function saveScore(name, dist) {
+            const entry = { name: name.toUpperCase(), score: Math.floor(dist) };
+            let scores = JSON.parse(localStorage.getItem('ecoRunScores')) || [
+                { name: "SAI KARTHIK", score: 2806 }, { name: "ECO-WARRIOR", score: 2500 }, { name: "SPEEDY", score: 1800 }
+            ];
+
+            // Cleanup inappropriate names from legacy scores
+            scores = scores.map(s => {
+                if (s.name.includes("FUCK")) s.name = "SAI KARTHIK";
+                return s;
+            });
+
+            if (name) scores.push(entry);
+            scores.sort((a, b) => b.score - a.score);
+            scores = scores.slice(0, 5);
+            localStorage.setItem('ecoRunScores', JSON.stringify(scores));
+            return scores;
+        }
+
+        function displayLeaderboard(containerId) {
+            const container = document.getElementById(containerId);
+            const scores = saveScore(currentPlayerName, distance);
+            let html = '';
+            scores.forEach((s, i) => {
+                html += `<div class="lb-row"><div class="lb-rank">#${i + 1}</div><div class="lb-name">${s.name}</div><div class="lb-score">${s.score}m</div></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function handleKey(e) {
+            if (gameState !== 'playing') return;
+            if (e.key === 'ArrowLeft') shiftLane(-1);
+            if (e.key === 'ArrowRight') shiftLane(1);
+            if (e.key === 'ArrowUp' || e.code === 'Space') jump();
+        }
+        function shiftLane(dir) { const next = lane + dir; if (next >= -1 && next <= 1) lane = next; }
+        function jump() { if (!isJumping) { isJumping = true; verticalVelocity = CONFIG.jumpForce; } }
+        function spawnPattern(startZ) { for (let z = startZ; z < 300; z += 25) spawnObstacle(-z); }
+
+        function spawnObstacle(z) {
+            const type = Math.random(); const lanes = [-1, 0, 1]; const obsLane = lanes[Math.floor(Math.random() * 3)];
+
+            // Environment props
+            if (Math.random() > 0.8) spawnBillboard(Math.random() > 0.5 ? 15 : -15, z);
+            else { spawnTree(-18 - Math.random() * 20, z); spawnTree(18 + Math.random() * 20, z); }
+
+            lanes.forEach(l => {
+                if (l !== obsLane && Math.random() > 0.4) {
+                    const handbag = createHandbagMesh(0x32CD32, 2.5); // Much bigger scale
+                    handbag.position.set(l * CONFIG.laneWidth, 1.2, z); // Adjusted Y for size
+                    scene.add(handbag);
+                    objects.push({ mesh: handbag, type: 'handbag', collectable: true, moving: false });
+                }
+            });
+
+            // Spawn Festival lights
+            if (Math.random() > 0.6) spawnFestivalLights(z);
+
+            if (type < 0.5) {
+                // TRAIN -> Better model with wheels
+                const group = new THREE.Group();
+                const trainLength = 45;
+                const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3.8, trainLength), MATS.trainBody);
+                body.position.y = 2.2; body.castShadow = true; group.add(body);
+                // Glass
+                const glass = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1.5, 3), MATS.trainGlass);
+                glass.position.set(0, 3, (trainLength / 2) - 1.5);
+                group.add(glass);
+                // Wheels
+                const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 3.6);
+                const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+                for (let wz = -(trainLength / 2) + 2.5; wz <= (trainLength / 2) - 2.5; wz += 10) {
+                    const w = new THREE.Mesh(wheelGeo, wheelMat);
+                    w.rotation.z = Math.PI / 2;
+                    w.position.set(0, 0.5, wz);
+                    group.add(w);
+                }
+
+                group.position.set(obsLane * CONFIG.laneWidth, 0, z); scene.add(group);
+                objects.push({ mesh: group, type: 'train', lane: obsLane, moving: true, speed: 5 });
+            } else if (type < 0.75) {
+                // BARRIER -> striped danger look
+                const barrier = new THREE.Group();
+                const barMesh = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 0.3), new THREE.MeshLambertMaterial({ color: 0xffaa00 }));
+                barMesh.position.y = 1.0; barrier.add(barMesh);
+                // Legs
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.2, 0.2), new THREE.MeshLambertMaterial({ color: 0x555555 }));
+                leg.position.set(-1.4, 0.6, 0); barrier.add(leg);
+                const leg2 = leg.clone(); leg2.position.set(1.4, 0.6, 0); barrier.add(leg2);
+
+                barrier.position.set(obsLane * CONFIG.laneWidth, 0, z); scene.add(barrier);
+                objects.push({ mesh: barrier, type: 'barrier', lane: obsLane, moving: false });
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (gameState === 'start') {
+                const time = Date.now() * 0.001;
+                camera.position.x = Math.sin(time) * 4; camera.position.z = Math.cos(time) * 4 + 2;
+                camera.lookAt(0, 1.5, 0);
+                renderer.render(scene, camera);
+                return;
+            }
+            if (gameState === 'gameover' || gameState === 'win') {
+                if (showcaseBag) showcaseBag.rotation.y += 0.01;
+                renderer.render(scene, camera); return;
+            }
+            if (gameState !== 'playing') return;
+
+            const dt = 1 / 60; timeElapsed += dt;
+            if (speed < CONFIG.maxSpeed) speed += dt * 0.5; // Acceleration
+            distance += speed * dt;
+
+            // --- PLAYER PHYSICS & MOVEMENT ---
+
+            // Smooth Lane Changing with Lerp
+            const targetX = lane * CONFIG.laneWidth;
+            currentLaneX += (targetX - currentLaneX) * 10 * dt; // Smooth interpolation
+            playerGroup.position.x = currentLaneX;
+
+            // Leaning effect when changing lanes
+            const xDiff = targetX - currentLaneX;
+            leanAngle += (xDiff * -0.15 - leanAngle) * 10 * dt; // Lean into the turn
+            playerGroup.rotation.z = leanAngle;
+
+            // Gravity & Jumping
+            if (isJumping) {
+                playerY += verticalVelocity * dt;
+                verticalVelocity += CONFIG.gravity * dt;
+
+                // Animation: Arms up
+                if (playerMeshParts.lArm) playerMeshParts.lArm.rotation.x = Math.PI;
+                if (playerMeshParts.rArm) playerMeshParts.rArm.rotation.x = Math.PI;
+                if (playerMeshParts.lLeg) playerMeshParts.lLeg.rotation.x = -0.5;
+                if (playerMeshParts.rLeg) playerMeshParts.rLeg.rotation.x = -0.2;
+
+                if (playerY <= 0) {
+                    playerY = 0; verticalVelocity = 0; isJumping = false;
+                    // Reset Landing
+                }
+            } else {
+                // RUNNING ANIMATION - Enhanced leg movement
+                const legSpeed = speed * 0.8;
+                const armSpeed = speed * 0.3; // Slower arm movement for handbag visibility
+
+                if (playerMeshParts.lLeg) playerMeshParts.lLeg.rotation.x = Math.sin(timeElapsed * legSpeed) * 1.2;
+                if (playerMeshParts.rLeg) playerMeshParts.rLeg.rotation.x = Math.sin(timeElapsed * legSpeed + Math.PI) * 1.2;
+
+                if (playerMeshParts.lArm) playerMeshParts.lArm.rotation.x = Math.sin(timeElapsed * armSpeed + Math.PI) * 0.8;
+                if (playerMeshParts.rArm) playerMeshParts.rArm.rotation.x = Math.sin(timeElapsed * armSpeed) * 0.8;
+            }
+            playerGroup.position.y = playerY;
+
+            // --- CHASER ANIMATION ---
+            if (chaserGroup) {
+                // Keep chasers behind player - Fixed visibility (Z+4 instead of Z+12)
+                chaserGroup.position.z = playerGroup.position.z + 4;
+                chaserGroup.position.x = playerGroup.position.x * 0.8; // Follow lanes slightly loosely
+
+                const runSpeed = speed * 0.8;
+                const trotSpeed = speed * 1.2;
+
+                // Police Animation
+                if (chaserParts.police.lLeg) chaserParts.police.lLeg.rotation.x = Math.sin(timeElapsed * runSpeed) * 1.0;
+                if (chaserParts.police.rLeg) chaserParts.police.rLeg.rotation.x = Math.sin(timeElapsed * runSpeed + Math.PI) * 1.0;
+                if (chaserParts.police.lArm) chaserParts.police.lArm.rotation.x = Math.sin(timeElapsed * runSpeed + Math.PI) * 0.8;
+                if (chaserParts.police.rArm) chaserParts.police.rArm.rotation.x = Math.sin(timeElapsed * runSpeed) * 0.8;
+
+                // Dog Animation (Trotting)
+                if (chaserParts.dog.flLeg) chaserParts.dog.flLeg.rotation.x = Math.sin(timeElapsed * trotSpeed) * 0.5;
+                if (chaserParts.dog.brLeg) chaserParts.dog.brLeg.rotation.x = Math.sin(timeElapsed * trotSpeed) * 0.5;
+                if (chaserParts.dog.frLeg) chaserParts.dog.frLeg.rotation.x = Math.sin(timeElapsed * trotSpeed + Math.PI) * 0.5;
+                if (chaserParts.dog.blLeg) chaserParts.dog.blLeg.rotation.x = Math.sin(timeElapsed * trotSpeed + Math.PI) * 0.5;
+
+                // Dog Tail/Head subtle bounce
+                chaserParts.dog.group.rotation.x = Math.sin(timeElapsed * trotSpeed * 2) * 0.05;
+            }
+
+            // Guard Logic Removed
+
+            // --- OBSTACLE MANAGEMENT ---
+            let minZ = 0; objects.forEach(o => { if (o.mesh.position.z < minZ) minZ = o.mesh.position.z; });
+            if (minZ > -150) spawnObstacle(minZ - 40); // Spawn further out
+
+            const pBox = new THREE.Box3().setFromObject(playerGroup).expandByScalar(-0.4); // Forgiving hitbox
+
+            for (let i = objects.length - 1; i >= 0; i--) {
+                let obj = objects[i];
+                // Move objects relative to player speed (or world moves around player)
+                // In this setup, we move objects towards Z+
+
+                // Dynamic Train Speed: Fast after 10 bags
+                let effectiveObjSpeed = obj.moving ? obj.speed : 0;
+                if (obj.type === 'train' && score >= 10) {
+                    effectiveObjSpeed = 60; // Very fast
+                }
+
+                obj.mesh.position.z += (speed + effectiveObjSpeed) * dt;
+
+                // Rotation for collectibles
+                if (obj.type === 'thread') {
+                    obj.mesh.rotation.y += 5 * dt;
+                }
+
+                if (obj.mesh.position.z > 15) { scene.remove(obj.mesh); objects.splice(i, 1); continue; }
+
+                // Collision
+                if (pBox.intersectsBox(new THREE.Box3().setFromObject(obj.mesh))) {
+                    if (obj.collectable) {
+                        score++;
+                        createBoomEffect(obj.mesh.position.x, obj.mesh.position.y, obj.mesh.position.z);
+                        playSFX();
+                        scene.remove(obj.mesh);
+                        objects.splice(i, 1);
+                    }
+                    else handleCrash();
+                }
+            }
+
+            // Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.mesh.position.addScaledVector(p.vel, dt);
+
+                if (p.isCracker) {
+                    p.vel.y -= 9.8 * dt; // Gravity for crackers
+                    p.life -= dt * 0.8;
+                } else {
+                    p.life -= dt * 2;
+                }
+
+                p.mesh.scale.setScalar(Math.max(0.001, p.life));
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Move environment props
+            trees.forEach(t => { t.position.z += speed * dt; if (t.position.z > 25) { scene.remove(t); trees.splice(trees.indexOf(t), 1); } });
+            billboards.forEach(b => { b.position.z += speed * dt; if (b.position.z > 25) { scene.remove(b); billboards.splice(billboards.indexOf(b), 1); } });
+            festivalProps.forEach(p => { p.position.z += speed * dt; if (p.position.z > 25) { scene.remove(p); festivalProps.splice(festivalProps.indexOf(p), 1); } });
+
+            // Speed Lines Effect (Small white strips on side)            // Smooth Camera Follow
+            const aspect = window.innerWidth / window.innerHeight;
+            const desiredCamX = playerGroup.position.x * 0.6; // Slight lag
+            const baseCamZ = aspect < 1 ? 6.5 : CONFIG.cameraOffset.z; // Even closer zoom on mobile
+            const desiredCamY = (aspect < 1 ? 4.0 : CONFIG.cameraOffset.y) + (playerY * 0.5); // Lower height on mobile
+
+            camera.position.x += (desiredCamX - camera.position.x) * 5 * dt;
+            camera.position.y += (desiredCamY - camera.position.y) * 5 * dt;
+            camera.position.z += (baseCamZ - camera.position.z) * 5 * dt;
+            camera.lookAt(playerGroup.position.x * 0.2, CONFIG.cameraLookAtOffset.y + (playerY * 0.2), 0); // Look slightly ahead of player
+
+            // --- NIGHT MODE TRANSITION ---
+            if (score >= 10) {
+                const targetColor = new THREE.Color(0x0a0a2a); // Deep night blue
+                const dayColor = new THREE.Color(0x87CEEB); // Sky blue
+
+                // Lerp background and fog
+                scene.background.lerp(targetColor, 0.01);
+                scene.fog.color.lerp(targetColor, 0.01);
+
+                // Dim lights
+                if (ambientLight.intensity > 0.3) ambientLight.intensity -= 0.005;
+                if (dirLight.intensity > 0.4) dirLight.intensity -= 0.005;
+
+                // Make festival lights glow
+                festivalProps.forEach(group => {
+                    group.traverse(child => {
+                        if (child.userData.isFestivalLight) {
+                            child.material.emissive.set(child.material.color);
+                            if (child.material.emissiveIntensity < 2.0) {
+                                child.material.emissiveIntensity += 0.02;
+                            }
+                        }
+                    });
+                });
+            }
+
+            // --- FIREWORKS (CRACKERS) ---
+            if (score >= 20 && Math.random() < 0.05) {
+                const fx = (Math.random() - 0.5) * 30;
+                const fy = 5 + Math.random() * 10;
+                const fz = -20 - Math.random() * 40;
+                createCracker(fx, fy, fz);
+            }
+
+            // UI Updates
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('dist-display').innerText = Math.floor(distance) + "m";
+            document.getElementById('progress-fill').style.width = Math.min((distance / CONFIG.finishDist) * 100, 100) + "%";
+
+            if (distance >= CONFIG.rewardDist && !rewardUnlocked) { rewardUnlocked = true; showNotify('reward-notify'); }
+
+            // Trigger Handbag formation based on handbags collected (score)
+            const handbagsCollected = score;
+            const upgradeThreshold = 5; // Every 5 handbags increases state
+            const level = Math.floor(handbagsCollected / upgradeThreshold); // Level starts at 0
+
+            if (level >= 0 && level > currentBagLevel && currentBagLevel < 4) {
+                currentBagLevel = level;
+                upgradeBag(level);
+                showNotify('upgrade-notify');
+            }
+
+            if (distance >= CONFIG.finishDist) showWin(true);
+            renderer.render(scene, camera);
+        }
+
+        function showNotify(id) {
+            const el = document.getElementById(id); el.classList.add('notify-show');
+            setTimeout(() => el.classList.remove('notify-show'), 3000);
+        }
+
+        function showToast(text) {
+            const el = document.getElementById('toast-notify'); el.innerText = text;
+            el.classList.add('notify-show'); setTimeout(() => el.classList.remove('notify-show'), 3000);
+        }
+
+        function handleCrash() {
+            prepareEndScene();
+            document.getElementById('hud').style.display = 'none';
+            if (rewardUnlocked) showWin(false);
+            else {
+                gameState = 'gameover';
+                document.getElementById('final-dist').innerText = Math.floor(distance) + "m";
+                displayLeaderboard('lb-content-fail');
+                document.getElementById('game-over-screen').classList.remove('hidden');
+            }
+        }
+
+        // SHOPIFY AUTO-REDIRECT LOGIC
+        function showWin(completed) {
+            prepareEndScene();
+            gameState = 'win';
+            document.getElementById('hud').style.display = 'none';
+            displayLeaderboard('lb-content-win');
+            document.getElementById('win-screen').classList.remove('hidden');
+
+            if (completed) document.getElementById('win-title').innerText = "3KM COMPLETED";
+            else document.getElementById('win-title').innerText = "REWARD SECURED";
+
+            if (completed) document.getElementById('win-title').innerText = "3KM COMPLETED";
+            else document.getElementById('win-title').innerText = "REWARD SECURED";
+        }
+
+        function prepareEndScene() {
+            isPlaying = false;
+            camera.position.set(0, 2, 4); camera.lookAt(0, 2, 0);
+            if (playerMeshParts.bag) {
+                playerGroup.visible = false;
+                showcaseBag = playerMeshParts.bag.clone();
+                showcaseBag.position.set(0, 2, 0); showcaseBag.scale.set(2, 2, 2);
+                scene.add(showcaseBag);
+            } else {
+                playerGroup.visible = true; playerGroup.rotation.y = Math.PI;
+            }
+        }
+
+        function onResize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = aspect;
+            camera.fov = aspect < 1 ? 60 / aspect : 60; // Dynamic FOV
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.copyCode = function () {
+            navigator.clipboard.writeText("NOBLE-CARRY-20").then(() => showToast("COUPON COPIED!"));
+        };
+
+        init();
+    </script>
+</body>
+
+</html>
