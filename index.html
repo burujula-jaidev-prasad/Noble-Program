@@ -1509,9 +1509,9 @@
 
             // --- CHASER ANIMATION ---
             if (chaserGroup) {
-                // Keep chasers behind player - Fixed visibility (Z+4 instead of Z+12)
-                chaserGroup.position.z = playerGroup.position.z + 4;
-                chaserGroup.position.x = playerGroup.position.x * 0.8; // Follow lanes slightly loosely
+                // Keep chasers closer behind player - Sticking closer (Z+3.2 instead of Z+4)
+                chaserGroup.position.z = playerGroup.position.z + 3.2;
+                chaserGroup.position.x = playerGroup.position.x; // Perfect lane following (factor 1.0)
 
                 const runSpeed = speed * 0.8;
                 const trotSpeed = speed * 1.2;
