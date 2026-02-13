@@ -1434,7 +1434,12 @@
             // Spawn Festival lights
             if (Math.random() > 0.6) spawnFestivalLights(z);
 
-            if (type < 0.5) {
+            // Single Train Guard: Check if a train is already active
+            let finalType = type;
+            const hasActiveTrain = objects.some(o => o.type === 'train');
+            if (hasActiveTrain && finalType < 0.5) finalType = 0.6; // Force to barrier if train exists
+
+            if (finalType < 0.5) {
                 // TRAIN -> Better model with wheels
                 const group = new THREE.Group();
                 const trainLength = 45;
@@ -1471,7 +1476,7 @@
             }
 
             // Train Warning Logic
-            if (type < 0.5) {
+            if (finalType < 0.5) {
                 const laneId = obsLane === -1 ? 'warn-left' : (obsLane === 0 ? 'warn-center' : 'warn-right');
                 const warnEl = document.getElementById(laneId);
                 const warningsContainer = document.getElementById('train-warnings');
@@ -1550,9 +1555,8 @@
                 if (playerMeshParts.lLeg) playerMeshParts.lLeg.rotation.x = -0.5;
                 if (playerMeshParts.rLeg) playerMeshParts.rLeg.rotation.x = -0.2;
 
-                if (playerY <= 0) {
-                    playerY = 0; verticalVelocity = 0; isJumping = false;
-                    // Reset Landing
+                if (playerY <= currentSurfaceY) {
+                    playerY = currentSurfaceY; verticalVelocity = 0; isJumping = false;
                 }
             } else {
                 // RUNNING ANIMATION - Enhanced leg movement
@@ -1564,6 +1568,13 @@
 
                 if (playerMeshParts.lArm) playerMeshParts.lArm.rotation.x = Math.sin(timeElapsed * armSpeed + Math.PI) * 0.8;
                 if (playerMeshParts.rArm) playerMeshParts.rArm.rotation.x = Math.sin(timeElapsed * armSpeed) * 0.8;
+
+                // Fall off logic
+                if (playerY > currentSurfaceY) {
+                    isJumping = true; // Trigger falling state
+                } else if (playerY < currentSurfaceY) {
+                    playerY = currentSurfaceY; // Snap to top
+                }
             }
             playerGroup.position.y = playerY;
 
@@ -1599,9 +1610,27 @@
             if (minZ > -150) spawnObstacle(minZ - 40); // Spawn further out
 
             const pBox = new THREE.Box3().setFromObject(playerGroup).expandByScalar(-0.4); // Forgiving hitbox
+            let currentSurfaceY = 0;
 
             for (let i = objects.length - 1; i >= 0; i--) {
                 let obj = objects[i];
+
+                // Platforming check (Must happen before movement or collision)
+                if (obj.type === 'train') {
+                    const trainBox = new THREE.Box3().setFromObject(obj.mesh);
+                    const trainLaneX = obj.lane * CONFIG.laneWidth;
+
+                    // If player is in same lane and above the train
+                    if (Math.abs(playerGroup.position.x - trainLaneX) < 1.0 &&
+                        playerGroup.position.z > trainBox.min.z &&
+                        playerGroup.position.z < trainBox.max.z) {
+
+                        if (playerY >= 3.8) {
+                            currentSurfaceY = 4.1;
+                        }
+                    }
+                }
+
                 // Move objects relative to player speed (or world moves around player)
                 // In this setup, we move objects towards Z+
 
@@ -1641,7 +1670,14 @@
                         scene.remove(obj.mesh);
                         objects.splice(i, 1);
                     }
-                    else handleCrash();
+                    else {
+                        // Only crash if not safely on top of the train
+                        if (obj.type === 'train' && playerY >= 4.0) {
+                            // Safe on roof
+                        } else {
+                            handleCrash();
+                        }
+                    }
                 }
             }
 
