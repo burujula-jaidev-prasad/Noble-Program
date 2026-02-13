@@ -1179,8 +1179,8 @@
             const rArmPiv = new THREE.Group(); rArmPiv.position.set(0.32, 1.75, 0); playerGroup.add(rArmPiv);
             const rArm = new THREE.Mesh(limbGeo, MATS.outfits[0]); rArm.position.y = -0.35; rArm.castShadow = true; rArmPiv.add(rArm);
             const rHand = new THREE.Mesh(handGeo, MATS.skin); rHand.position.y = -0.4; rHand.castShadow = true; rArm.add(rHand);
-            playerMeshParts.rArm = rArmPiv; // Save pivot for animation
             playerMeshParts.rHand = rHand; // Save hand for attaching handbag
+            playerMeshParts.rArm = rArmPiv; // Save pivot for animation
 
             // --- LEGS ---
             // Left Leg Pivot (Hip)
@@ -1196,7 +1196,6 @@
             playerMeshParts.rLeg = rLegPiv; // Save pivot for animation
 
             scene.add(playerGroup);
-            scene.add(playerGroup);
             currentBagLevel = 0; upgradeBag(0); // Start with basic bag
         }
 
@@ -1209,11 +1208,14 @@
         }
 
         function upgradeBag(level) {
-            // Remove existing bag from hand OR back
-            if (playerMeshParts.bag) {
-                if (playerMeshParts.bag.parent) playerMeshParts.bag.parent.remove(playerMeshParts.bag);
-                playerMeshParts.bag = null;
+            // Remove ANY existing bag from hand
+            if (playerMeshParts.rHand) {
+                while (playerMeshParts.rHand.children.length > 0) {
+                    playerMeshParts.rHand.remove(playerMeshParts.rHand.children[0]);
+                }
             }
+            playerMeshParts.bag = null;
+
             updateOutfit(level);
             if (level === -1) return;
 
@@ -1288,7 +1290,12 @@
             trees.forEach(t => scene.remove(t)); trees = [];
             billboards.forEach(b => scene.remove(b)); billboards = [];
             festivalProps.forEach(p => scene.remove(p)); festivalProps = [];
-            if (showcaseBag) { scene.remove(showcaseBag); showcaseBag = null; }
+
+            // Explicitly clear showcaseBag
+            if (showcaseBag) {
+                scene.remove(showcaseBag);
+                showcaseBag = null;
+            }
             playerGroup.visible = true;
 
             // Reset Day Mode
@@ -1678,6 +1685,10 @@
         function prepareEndScene() {
             isPlaying = false;
             camera.position.set(0, 2, 4); camera.lookAt(0, 2, 0);
+
+            // Clean previous showcaseBag if exists
+            if (showcaseBag) { scene.remove(showcaseBag); showcaseBag = null; }
+
             if (playerMeshParts.bag) {
                 playerGroup.visible = false;
                 showcaseBag = playerMeshParts.bag.clone();
