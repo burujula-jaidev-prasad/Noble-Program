@@ -419,6 +419,52 @@
                 padding: 10px;
             }
         }
+
+        /* Train Warning Styles */
+        .train-warning {
+            position: absolute;
+            bottom: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            flex-direction: row;
+            gap: 40px;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .warning-bit {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 0, 0, 0.7);
+            border: 4px solid #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 50px;
+            font-weight: bold;
+            animation: pulse-warn 0.4s infinite alternate;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .warning-bit.active {
+            opacity: 1;
+        }
+
+        @keyframes pulse-warn {
+            from {
+                transform: scale(1);
+                box-shadow: 0 0 -10px #ff0000;
+            }
+
+            to {
+                transform: scale(1.2);
+                box-shadow: 0 0 30px #ff0000;
+            }
+        }
     </style>
 </head>
 
@@ -455,6 +501,12 @@
         </div>
 
         <div id="tutorial" class="hidden">ARROWS / SWIPE TO MOVE & JUMP</div>
+
+        <div id="train-warnings" class="train-warning">
+            <div id="warn-left" class="warning-bit">!</div>
+            <div id="warn-center" class="warning-bit">!</div>
+            <div id="warn-right" class="warning-bit">!</div>
+        </div>
     </div>
 
     <div id="start-screen" class="screen">
@@ -1417,6 +1469,32 @@
                 barrier.position.set(obsLane * CONFIG.laneWidth, 0, z); scene.add(barrier);
                 objects.push({ mesh: barrier, type: 'barrier', lane: obsLane, moving: false });
             }
+
+            // Train Warning Logic
+            if (type < 0.5) {
+                const laneId = obsLane === -1 ? 'warn-left' : (obsLane === 0 ? 'warn-center' : 'warn-right');
+                const warnEl = document.getElementById(laneId);
+                const warningsContainer = document.getElementById('train-warnings');
+                warningsContainer.style.display = 'flex';
+                warnEl.classList.add('active');
+                setTimeout(() => {
+                    warnEl.classList.remove('active');
+                    // Hide container if no active warnings
+                    if (!warningsContainer.querySelector('.warning-bit.active')) {
+                        warningsContainer.style.display = 'none';
+                    }
+                }, 1500);
+            }
+        }
+
+        let shakeIntensity = 0;
+        function updateCameraShake(dt) {
+            if (shakeIntensity > 0) {
+                camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+                camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+                shakeIntensity *= 0.9; // Decay
+                if (shakeIntensity < 0.01) shakeIntensity = 0;
+            }
         }
 
         function animate() {
@@ -1527,13 +1605,25 @@
                 // Move objects relative to player speed (or world moves around player)
                 // In this setup, we move objects towards Z+
 
-                // Dynamic Train Speed: Fast after 10 bags
+                // Dynamic Train Speed Scaling
                 let effectiveObjSpeed = obj.moving ? obj.speed : 0;
-                if (obj.type === 'train' && score >= 10) {
-                    effectiveObjSpeed = 60; // Very fast
+                if (obj.type === 'train') {
+                    // Scale speed: starts at 20, ramps up with score
+                    effectiveObjSpeed = Math.min(20 + score * 3, 70);
+
+                    // Trigger Rumble when close
+                    const distToPlayer = Math.abs(obj.mesh.position.z - playerGroup.position.z);
+                    if (distToPlayer < 40) {
+                        shakeIntensity = Math.max(shakeIntensity, 0.15 * (1 - distToPlayer / 40));
+                    }
                 }
 
                 obj.mesh.position.z += (speed + effectiveObjSpeed) * dt;
+
+                // Track shaking effect for train itself
+                if (obj.type === 'train') {
+                    obj.mesh.position.x = (obj.lane * CONFIG.laneWidth) + (Math.random() - 0.5) * 0.03;
+                }
 
                 // Rotation for collectibles
                 if (obj.type === 'thread') {
@@ -1643,6 +1733,8 @@
             }
 
             if (distance >= CONFIG.finishDist) showWin(true);
+
+            updateCameraShake(dt);
             renderer.render(scene, camera);
         }
 
