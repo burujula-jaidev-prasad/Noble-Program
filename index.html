@@ -16,6 +16,7 @@
             background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 100%);
             /* Daytime Sky */
             user-select: none;
+            touch-action: none;
         }
 
         #game-container {
@@ -522,6 +523,7 @@
             laneWidth: 3.5,
             runSpeed: 25, // Reduced for smoother gameplay
             maxSpeed: 70,
+            nightMaxSpeed: 45,
             gravity: -60, // Slightly reduced for better arc
             jumpForce: 18,
             bagUnlockDist: 250,
@@ -622,8 +624,13 @@
             // Inputs
             document.addEventListener('keydown', handleKey);
             let tx = 0, ty = 0;
-            document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: false });
+            document.addEventListener('touchstart', e => {
+                e.preventDefault();
+                tx = e.touches[0].clientX;
+                ty = e.touches[0].clientY;
+            }, { passive: false });
             document.addEventListener('touchend', e => {
+                e.preventDefault();
                 const dx = e.changedTouches[0].clientX - tx;
                 const dy = e.changedTouches[0].clientY - ty;
                 if (Math.abs(dx) > Math.abs(dy)) {
@@ -1408,7 +1415,18 @@
             if (gameState !== 'playing') return;
 
             const dt = 1 / 60; timeElapsed += dt;
-            if (speed < CONFIG.maxSpeed) speed += dt * 0.5; // Acceleration
+
+            // Speed Management
+            let currentMax = CONFIG.maxSpeed;
+            if (score >= 10) currentMax = CONFIG.nightMaxSpeed;
+
+            if (speed < currentMax) {
+                speed += dt * 0.5; // Acceleration
+            } else if (speed > currentMax) {
+                speed -= dt * 2.0; // Gradually slow down to night-time speed cap
+                if (speed < currentMax) speed = currentMax;
+            }
+
             distance += speed * dt;
 
             // --- PLAYER PHYSICS & MOVEMENT ---
