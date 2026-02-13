@@ -855,6 +855,8 @@
             const policeGroup = new THREE.Group();
             const skinMat = MATS.skin;
             const uniformMat = new THREE.MeshLambertMaterial({ color: 0x000080 }); // Navy Blue
+            const limbGeo = new THREE.CylinderGeometry(0.07, 0.06, 0.7, 12);
+            const handGeo = new THREE.SphereGeometry(0.08, 12, 12);
 
             // Torso
             const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.2, 0.75, 12), uniformMat);
@@ -868,26 +870,47 @@
 
             // Police Cap
             const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.22, 0.1, 12), uniformMat);
-            cap.position.y = 2.25;
-            policeGroup.add(cap);
+            cap.position.y = 2.25; policeGroup.add(cap);
             const brim = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.15), new THREE.MeshLambertMaterial({ color: 0x111111 }));
-            brim.position.set(0, 2.2, 0.15);
-            policeGroup.add(brim);
+            brim.position.set(0, 2.2, 0.15); policeGroup.add(brim);
 
-            // Arms & Legs (Simplified pivots for chaser)
-            const limbGeo = new THREE.CylinderGeometry(0.07, 0.06, 0.7, 12);
+            // --- ARMS ---
+            // Left Arm Pivot
+            const lArmPiv = new THREE.Group(); lArmPiv.position.set(-0.32, 1.75, 0); policeGroup.add(lArmPiv);
+            const lArm = new THREE.Mesh(limbGeo, uniformMat); lArm.position.y = -0.35; lArm.castShadow = true; lArmPiv.add(lArm);
+            const lHand = new THREE.Mesh(handGeo, skinMat); lHand.position.y = -0.4; lHand.castShadow = true; lArm.add(lHand);
 
-            const lArm = new THREE.Mesh(limbGeo, uniformMat); lArm.position.set(-0.32, 1.4, 0); policeGroup.add(lArm);
-            const rArm = new THREE.Mesh(limbGeo, uniformMat); rArm.position.set(0.32, 1.4, 0); policeGroup.add(rArm);
-            const lLeg = new THREE.Mesh(limbGeo, uniformMat); lLeg.position.set(-0.15, 0.75, 0); policeGroup.add(lLeg);
-            const rLeg = new THREE.Mesh(limbGeo, uniformMat); rLeg.position.set(0.15, 0.75, 0); policeGroup.add(rLeg);
+            // Right Arm Pivot
+            const rArmPiv = new THREE.Group(); rArmPiv.position.set(0.32, 1.75, 0); policeGroup.add(rArmPiv);
+            const rArm = new THREE.Mesh(limbGeo, uniformMat); rArm.position.y = -0.35; rArm.castShadow = true; rArmPiv.add(rArm);
+            const rHand = new THREE.Mesh(handGeo, skinMat); rHand.position.y = -0.4; rHand.castShadow = true; rArm.add(rHand);
 
-            // Shoes (Boots)
+            // --- BATON (Stick) ---
+            const batonGroup = new THREE.Group();
+            const batonBody = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.8), new THREE.MeshLambertMaterial({ color: 0x111111 }));
+            batonBody.castShadow = true; batonGroup.add(batonBody);
+            const batonHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.25), new THREE.MeshLambertMaterial({ color: 0x888888 }));
+            batonHandle.position.y = -0.3; batonGroup.add(batonHandle);
+
+            batonGroup.position.set(0, -0.1, 0.05);
+            batonGroup.rotation.x = Math.PI / 2;
+            rHand.add(batonGroup);
+
+            // --- LEGS ---
+            // Left Leg Pivot
+            const lLegPiv = new THREE.Group(); lLegPiv.position.set(-0.15, 1.1, 0); policeGroup.add(lLegPiv);
+            const lLeg = new THREE.Mesh(limbGeo, uniformMat); lLeg.position.y = -0.35; lLeg.castShadow = true; lLegPiv.add(lLeg);
+
+            // Right Leg Pivot
+            const rLegPiv = new THREE.Group(); rLegPiv.position.set(0.15, 1.1, 0); policeGroup.add(rLegPiv);
+            const rLeg = new THREE.Mesh(limbGeo, uniformMat); rLeg.position.y = -0.35; rLeg.castShadow = true; rLegPiv.add(rLeg);
+
+            // Boots
             const footGeo = new THREE.BoxGeometry(0.15, 0.1, 0.28);
             const lShoe = new THREE.Mesh(footGeo, MATS.policeShoes); lShoe.position.set(0, -0.4, 0.08); lShoe.castShadow = true; lLeg.add(lShoe);
             const rShoe = new THREE.Mesh(footGeo, MATS.policeShoes); rShoe.position.set(0, -0.4, 0.08); rShoe.castShadow = true; rLeg.add(rShoe);
 
-            return { group: policeGroup, lArm, rArm, lLeg, rLeg };
+            return { group: policeGroup, lArm: lArmPiv, rArm: rArmPiv, lLeg: lLegPiv, rLeg: rLegPiv };
         }
 
         function createDogMesh() {
@@ -1535,10 +1558,10 @@
                 const trotSpeed = speed * 1.2;
 
                 // Police Animation
-                if (chaserParts.police.lLeg) chaserParts.police.lLeg.rotation.x = Math.sin(timeElapsed * runSpeed) * 1.0;
-                if (chaserParts.police.rLeg) chaserParts.police.rLeg.rotation.x = Math.sin(timeElapsed * runSpeed + Math.PI) * 1.0;
-                if (chaserParts.police.lArm) chaserParts.police.lArm.rotation.x = Math.sin(timeElapsed * runSpeed + Math.PI) * 0.8;
-                if (chaserParts.police.rArm) chaserParts.police.rArm.rotation.x = Math.sin(timeElapsed * runSpeed) * 0.8;
+                if (chaserParts.police.lLeg) chaserParts.police.lLeg.rotation.x = Math.sin(timeElapsed * runSpeed) * 1.2;
+                if (chaserParts.police.rLeg) chaserParts.police.rLeg.rotation.x = Math.sin(timeElapsed * runSpeed + Math.PI) * 1.2;
+                if (chaserParts.police.lArm) chaserParts.police.lArm.rotation.x = Math.sin(timeElapsed * runSpeed + Math.PI) * 1.0;
+                if (chaserParts.police.rArm) chaserParts.police.rArm.rotation.x = Math.sin(timeElapsed * runSpeed) * 1.0;
 
                 // Dog Animation (Trotting)
                 if (chaserParts.dog.flLeg) chaserParts.dog.flLeg.rotation.x = Math.sin(timeElapsed * trotSpeed) * 0.5;
