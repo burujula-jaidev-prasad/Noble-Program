@@ -1146,6 +1146,47 @@
             }
         }
 
+        function createAirBalloon() {
+            const group = new THREE.Group();
+
+            // Branding Canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ff4444'; ctx.fillRect(0, 0, 512, 256);
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 80px Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('NOBLE CARRY', 256, 128);
+            const texture = new THREE.CanvasTexture(canvas);
+
+            // Balloon Mesh
+            const balloonGeo = new THREE.SphereGeometry(4, 32, 32);
+            const balloonMat = new THREE.MeshStandardMaterial({ map: texture, color: 0xffffff });
+            const balloon = new THREE.Mesh(balloonGeo, balloonMat);
+            balloon.scale.y = 1.25; balloon.castShadow = true;
+            group.add(balloon);
+
+            // Basket
+            const basketGeo = new THREE.BoxGeometry(1.5, 1.2, 1.5);
+            const basketMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+            const basket = new THREE.Mesh(basketGeo, basketMat);
+            basket.position.y = -8; basket.castShadow = true;
+            group.add(basket);
+
+            // Strings
+            const lineMat = new THREE.MeshBasicMaterial({ color: 0x444444 });
+            const lineGeo = new THREE.CylinderGeometry(0.02, 0.02, 6);
+            const p = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+            p.forEach(pos => {
+                const line = new THREE.Mesh(lineGeo, lineMat);
+                line.position.set(pos[0], -4.5, pos[1]);
+                line.rotation.z = pos[0] * 0.15; line.rotation.x = -pos[1] * 0.15;
+                group.add(line);
+            });
+
+            return group;
+        }
+
         function createRealisticPlayer() {
             playerGroup = new THREE.Group();
 
@@ -1449,10 +1490,9 @@
                     w.position.set(0, 0.5, wz);
                     group.add(w);
                 }
-
                 group.position.set(obsLane * CONFIG.laneWidth, 0, z); scene.add(group);
                 objects.push({ mesh: group, type: 'train', lane: obsLane, moving: true, speed: 5 });
-            } else if (type < 0.75) {
+            } else if (finalType < 0.75) {
                 // BARRIER -> striped danger look
                 const barrier = new THREE.Group();
                 const barMesh = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 0.3), new THREE.MeshLambertMaterial({ color: 0xffaa00 }));
@@ -1466,6 +1506,14 @@
                 objects.push({ mesh: barrier, type: 'barrier', lane: obsLane, moving: false });
             }
 
+            // --- SPAWN AIR BALLOON ---
+            if (Math.random() > 0.85) {
+                const balloon = createAirBalloon();
+                const side = Math.random() > 0.5 ? 1 : -1;
+                balloon.position.set(side * (20 + Math.random() * 20), 20 + Math.random() * 15, z - 50);
+                scene.add(balloon);
+                objects.push({ mesh: balloon, type: 'balloon', moving: false, speed: 0.5 + Math.random() * 1.5 });
+            }
         }
 
         let shakeIntensity = 0;
@@ -1626,6 +1674,12 @@
                 // Rotation for collectibles
                 if (obj.type === 'thread') {
                     obj.mesh.rotation.y += 5 * dt;
+                }
+
+                // Balloon Floating
+                if (obj.type === 'balloon') {
+                    obj.mesh.position.y += Math.sin(timeElapsed * 0.5) * 0.05;
+                    obj.mesh.rotation.y += 0.1 * dt;
                 }
 
                 if (obj.mesh.position.z > 15) { scene.remove(obj.mesh); objects.splice(i, 1); continue; }
