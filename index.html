@@ -880,6 +880,11 @@
             const lLeg = new THREE.Mesh(limbGeo, uniformMat); lLeg.position.set(-0.15, 0.75, 0); policeGroup.add(lLeg);
             const rLeg = new THREE.Mesh(limbGeo, uniformMat); rLeg.position.set(0.15, 0.75, 0); policeGroup.add(rLeg);
 
+            // Shoes (Boots)
+            const footGeo = new THREE.BoxGeometry(0.15, 0.1, 0.28);
+            const lShoe = new THREE.Mesh(footGeo, MATS.policeShoes); lShoe.position.set(0, -0.4, 0.08); lShoe.castShadow = true; lLeg.add(lShoe);
+            const rShoe = new THREE.Mesh(footGeo, MATS.policeShoes); rShoe.position.set(0, -0.4, 0.08); rShoe.castShadow = true; rLeg.add(rShoe);
+
             return { group: policeGroup, lArm, rArm, lLeg, rLeg };
         }
 
@@ -973,6 +978,9 @@
                 new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.3, roughness: 0.4 }),
                 new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.5, roughness: 0.2 })
             ];
+
+            MATS.shoes = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+            MATS.policeShoes = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 });
 
             // Billboard Textures
             MATS.billboards = [
@@ -1178,13 +1186,13 @@
             // Left Leg Pivot (Hip)
             const lLegPiv = new THREE.Group(); lLegPiv.position.set(-0.15, 1.1, 0); playerGroup.add(lLegPiv);
             const lLeg = new THREE.Mesh(limbGeo, MATS.pants); lLeg.position.y = -0.35; lLeg.castShadow = true; lLegPiv.add(lLeg);
-            const lFoot = new THREE.Mesh(footGeo, MATS.track); lFoot.position.set(0, -0.4, 0.08); lFoot.castShadow = true; lLeg.add(lFoot);
+            const lFoot = new THREE.Mesh(footGeo, MATS.shoes); lFoot.position.set(0, -0.4, 0.08); lFoot.castShadow = true; lLeg.add(lFoot);
             playerMeshParts.lLeg = lLegPiv; // Save pivot for animation
 
             // Right Leg Pivot (Hip)
             const rLegPiv = new THREE.Group(); rLegPiv.position.set(0.15, 1.1, 0); playerGroup.add(rLegPiv);
             const rLeg = new THREE.Mesh(limbGeo, MATS.pants); rLeg.position.y = -0.35; rLeg.castShadow = true; rLegPiv.add(rLeg);
-            const rFoot = new THREE.Mesh(footGeo, MATS.track); rFoot.position.set(0, -0.4, 0.08); rFoot.castShadow = true; rLeg.add(rFoot);
+            const rFoot = new THREE.Mesh(footGeo, MATS.shoes); rFoot.position.set(0, -0.4, 0.08); rFoot.castShadow = true; rLeg.add(rFoot);
             playerMeshParts.rLeg = rLegPiv; // Save pivot for animation
 
             scene.add(playerGroup);
