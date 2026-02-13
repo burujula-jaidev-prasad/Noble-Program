@@ -1532,6 +1532,26 @@
 
             distance += speed * dt;
 
+            // --- PLATFORMING DETECTION ---
+            let currentSurfaceY = 0;
+            for (let i = 0; i < objects.length; i++) {
+                let obj = objects[i];
+                if (obj.type === 'train') {
+                    const trainBox = new THREE.Box3().setFromObject(obj.mesh);
+                    const trainLaneX = obj.lane * CONFIG.laneWidth;
+
+                    // If player is in same lane and above the train
+                    if (Math.abs(playerGroup.position.x - trainLaneX) < 1.0 &&
+                        playerGroup.position.z > trainBox.min.z &&
+                        playerGroup.position.z < trainBox.max.z) {
+
+                        if (playerY >= 3.8) {
+                            currentSurfaceY = 4.1;
+                        }
+                    }
+                }
+            }
+
             // --- PLAYER PHYSICS & MOVEMENT ---
 
             // Smooth Lane Changing with Lerp
@@ -1610,26 +1630,9 @@
             if (minZ > -150) spawnObstacle(minZ - 40); // Spawn further out
 
             const pBox = new THREE.Box3().setFromObject(playerGroup).expandByScalar(-0.4); // Forgiving hitbox
-            let currentSurfaceY = 0;
 
             for (let i = objects.length - 1; i >= 0; i--) {
                 let obj = objects[i];
-
-                // Platforming check (Must happen before movement or collision)
-                if (obj.type === 'train') {
-                    const trainBox = new THREE.Box3().setFromObject(obj.mesh);
-                    const trainLaneX = obj.lane * CONFIG.laneWidth;
-
-                    // If player is in same lane and above the train
-                    if (Math.abs(playerGroup.position.x - trainLaneX) < 1.0 &&
-                        playerGroup.position.z > trainBox.min.z &&
-                        playerGroup.position.z < trainBox.max.z) {
-
-                        if (playerY >= 3.8) {
-                            currentSurfaceY = 4.1;
-                        }
-                    }
-                }
 
                 // Move objects relative to player speed (or world moves around player)
                 // In this setup, we move objects towards Z+
