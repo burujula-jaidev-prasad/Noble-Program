@@ -1310,9 +1310,27 @@
             spawnInitialTrees(); spawnPattern(60);
         }
 
+        let trainGain, rumbleOsc;
         function initAudio() {
             const AC = window.AudioContext || window.webkitAudioContext;
             audioCtx = new AC();
+
+            // Train Rumble Setup
+            trainGain = audioCtx.createGain();
+            trainGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            trainGain.connect(audioCtx.destination);
+
+            rumbleOsc = audioCtx.createOscillator();
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(100, audioCtx.currentTime);
+
+            rumbleOsc.type = 'sawtooth';
+            rumbleOsc.frequency.setValueAtTime(50, audioCtx.currentTime);
+
+            rumbleOsc.connect(filter);
+            filter.connect(trainGain);
+            rumbleOsc.start();
         }
 
         function playSFX() {
@@ -1535,7 +1553,23 @@
             // Guard Logic Removed
 
             // --- OBSTACLE MANAGEMENT ---
-            let minZ = 0; objects.forEach(o => { if (o.mesh.position.z < minZ) minZ = o.mesh.position.z; });
+            let minZ = 0; let closestTrainDist = 200;
+            objects.forEach(o => {
+                if (o.mesh.position.z < minZ) minZ = o.mesh.position.z;
+                if (o.type === 'train') {
+                    const d = Math.abs(o.mesh.position.z - playerGroup.position.z);
+                    if (d < closestTrainDist) closestTrainDist = d;
+                }
+            });
+
+            // Update Train Audio Volume
+            if (trainGain && audioCtx) {
+                const vol = Math.max(0, 1 - (closestTrainDist / 120));
+                trainGain.gain.setTargetAtTime(vol * 0.3, audioCtx.currentTime, 0.1);
+                // Also modulate pitch slightly for speed feel
+                if (rumbleOsc) rumbleOsc.frequency.setTargetAtTime(40 + vol * 20, audioCtx.currentTime, 0.1);
+            }
+
             if (minZ > -150) spawnObstacle(minZ - 40); // Spawn further out
 
             const pBox = new THREE.Box3().setFromObject(playerGroup).expandByScalar(-0.4); // Forgiving hitbox
